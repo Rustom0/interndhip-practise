@@ -1,6 +1,7 @@
 {
   "name": "internship",
   "version": "0.1.0",
+  "homepage": "https://github.com/Rustom0/interndhip-practise.git" ,
   "private": true,
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
@@ -19,6 +20,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": [
@@ -37,5 +40,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
   }
 }
