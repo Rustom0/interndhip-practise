@@ -1,0 +1,16 @@
+{
+  "files": {
+    "main.css": "/Rustom0/interndhip-practise.git/static/css/main.e6c13ad2.css",
+    "main.js": "/Rustom0/interndhip-practise.git/static/js/main.e26d4a31.js",
+    "static/js/453.05f68eb2.chunk.js": "/Rustom0/interndhip-practise.git/static/js/453.05f68eb2.chunk.js",
+    "static/media/loading.gif": "/Rustom0/interndhip-practise.git/static/media/loading.6d9150cbd338dadb6368.gif",
+    "index.html": "/Rustom0/interndhip-practise.git/index.html",
+    "main.e6c13ad2.css.map": "/Rustom0/interndhip-practise.git/static/css/main.e6c13ad2.css.map",
+    "main.e26d4a31.js.map": "/Rustom0/interndhip-practise.git/static/js/main.e26d4a31.js.map",
+    "453.05f68eb2.chunk.js.map": "/Rustom0/interndhip-practise.git/static/js/453.05f68eb2.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e6c13ad2.css",
+    "static/js/main.e26d4a31.js"
+  ]
+}
