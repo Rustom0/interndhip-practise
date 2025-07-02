@@ -3,11 +3,13 @@
 | CustomerModal Component
 |--------------------------------------------------
 */
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef , } from "react";
+import { useNavigate } from "react-router-dom";
 
 const CustomerModal = ({ customer, visible, onClose }) => {
   const modalRef = useRef(null);
   const bsInstance = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const modalEl = modalRef.current;
@@ -53,6 +55,24 @@ const CustomerModal = ({ customer, visible, onClose }) => {
     };
   }, [visible, onClose]);
 
+  if (!customer) return null; // Ensure customer data is available
+
+  const handleViewProfile = () => {
+    if (!bsInstance.current) return;
+
+    const modalEl = modalRef.current;
+    if (!modalEl) return;
+
+    // Wait for the modal to fully hide before navigating
+    const onHidden = () => {
+      navigate("/profile", { state: { customer } });
+      modalEl.removeEventListener("hidden.bs.modal", onHidden);
+    };
+
+    modalEl.addEventListener("hidden.bs.modal", onHidden);
+    bsInstance.current.hide(); // This will trigger the 'hidden.bs.modal' event
+  };
+
   return (
     <div
       id="customerModal"
@@ -97,7 +117,8 @@ const CustomerModal = ({ customer, visible, onClose }) => {
                   <strong>Website:</strong> {customer.website}
                 </p>
                 <p>
-                    <strong>Address:</strong> {customer.address.country},{customer.address.city},{customer.address.street}
+                  <strong>Address:</strong> {customer.address.country},
+                  {customer.address.city},{customer.address.street}
                 </p>
               </>
             ) : (
@@ -105,6 +126,9 @@ const CustomerModal = ({ customer, visible, onClose }) => {
             )}
           </div>
           <div className="modal-footer">
+            <button className="btn btn-primary" onClick={handleViewProfile}>
+              View Profile
+            </button>
             <button className="btn btn-secondary" onClick={onClose}>
               Close
             </button>
