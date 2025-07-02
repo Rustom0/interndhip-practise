@@ -3,16 +3,17 @@
 | npm imports
 |--------------------------------------------------
 */
-import React, { useEffect, useState } from "react";
+import React,  { useCallback, useContext, useEffect, useState, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 /*
 |--------------------------------------------------
 | Local imports
 |--------------------------------------------------
 */
-
 import Loader from "./Loader";
-import CustomerModal from "./CustomerModel";
+import CustomerModal from "./CustomerModal";
+import CustomersContext from "../CustomersContext";
 
 /*
 |--------------------------------------------------
@@ -20,10 +21,11 @@ import CustomerModal from "./CustomerModel";
 |--------------------------------------------------
 */
 const CustomerView = () => {
-  const [customers, setCustomers] = useState([]); // State to hold customer data
+  const {customers, setCustomers} = useContext(CustomersContext); // State to hold customer data
   const [message, setMessage] = useState(""); // State to hold delete message
   const [loading, setLoading] = useState(false); // State to manage loading state
   const [page, setPage] = useState(1); // State to manage pagination
+  // const pageSize = 10; // Number of customers per page 
 
   /*
   |--------------------------------------------------
@@ -35,15 +37,28 @@ const CustomerView = () => {
   const [showModal, setShowModal] = useState(false);
 
   /*
-|--------------------------------------------------
-| functions to fetch and manage customer data from API
-|--------------------------------------------------
-*/
-  const fetchCustomers = async () => {
+  |--------------------------------------------------
+  | useLocation and useNavigate hooks to manage routing
+  | for unncessary re-renders
+  |--------------------------------------------------
+  */
+  const location = useLocation();
+  const navigate  = useNavigate();
+
+
+  /*
+  |--------------------------------------------------
+  | functions to fetch and manage customer data from API
+  |--------------------------------------------------
+  */
+  
+
+
+  const fetchCustomers = useCallback ( async () => {
     try {
       setLoading(true); // Set loading state to true
       const response = await fetch(
-        "https://fakerapi.it/api/v2/persons?_quantity=10"
+        `https://fakerapi.it/api/v2/persons?_quantity=50`
       );
       const data = await response.json();
       /*
@@ -52,31 +67,82 @@ const CustomerView = () => {
     |--------------------------------------------------
     */
       setCustomers(data.data);
+      console.log("fetched");
+      setPage(1); // Reset to first page after fetching new data
       setMessage("");
     } catch (error) {
       console.error("There was an error fetching the customers!", error);
     } finally {
       setLoading(false); // Set loading state to false after fetching
     }
-  };
-  /*
+  }, [ setCustomers]);
+  
+
+    /*
     |--------------------------------------------------
     | fetchCustomers function is called when the component mounts
     |--------------------------------------------------
     */
+   useEffect(() => {
+    /*
+    |--------------------------------------------------
+    | If the user is coming back from ViewProfile, we skip the fetch
+    | to avoid unnecessary API calls
+    |--------------------------------------------------
+    */
+    if (location.state?.wasEdited) {
+    // router state cleanup so it fires only once
+    navigate(location.pathname, { replace: true, state: null });
+    return;                      
+  } 
+    if (customers.length===0 ) {
+          fetchCustomers();
+    }// fetch only if no data yet
+  }, [fetchCustomers,location, navigate,customers.length]); 
+
+    /*
+    |--------------------------------------------------
+    | Pagination logic to manage which customers to display
+    |--------------------------------------------------
+    */
+   const PAGE_SIZE = 10;
+   const freshFetchRef = useRef(false); // to avoid re-fetching on every render
+    const [pageRows, setPageRows] = useState([]);  // rows shown now
+    /*
+    | whenever `page` changes OR customers were freshly fetched,
+    | freeze the rows for *that* page into `pageRows`.
+    |  We rely on an extra ref flag to know “fresh fetch”.
+    |--------------------------------------------------
+    */
+    useEffect(() => {
+    // detect a brand‑new fetch
+    if (freshFetchRef.current) {
+      freshFetchRef.current = false;    // consume flag
+      setPageRows(customers.slice(0, PAGE_SIZE));
+      return;
+    }
+
+    // normal page change -> slice once
+    const start = (page - 1) * PAGE_SIZE;
+    const slice = customers.slice(start, start + PAGE_SIZE);
+    setPageRows(slice);
+  }, [page]);
+
+  /* mark fresh fetch whenever fetchCustomers completes */
   useEffect(() => {
-    fetchCustomers();
-  }, []);
+    if (customers.length > 0) freshFetchRef.current = true;
+  }, [customers]);
+
+  const totalPages = Math.max(1, Math.ceil(customers.length / PAGE_SIZE));
+
+ 
   /*
    |--------------------------------------------------
    | funtion to handle previous page 
    |--------------------------------------------------
    */
   const handlePrevClick = () => {
-    if (page > 1) {
-      setPage(page - 1);
-      fetchCustomers(); // Re-fetch customers for the previous page
-    }
+    setPage((p) => Math.max(p - 1, 1));
   };
   /*
    |--------------------------------------------------
@@ -85,40 +151,19 @@ const CustomerView = () => {
    */
 
   const handleNextClick = () => {
-    setPage(page + 1);
-    fetchCustomers(); // Re-fetch customers for the next page
+    setPage((p) => Math.min(p + 1, totalPages));
   };
   /*
    |--------------------------------------------------
    | funtion to Delete customer for the UI
    |--------------------------------------------------
    */
-  const deleteCustomer = (customerId) => {
-    const updated = customers.filter((customer) => customer.id !== customerId);
-    setCustomers(updated); // Remove from UI
+  const deleteCustomer = (id) => {
+    setCustomers(prev => prev.filter(c => c.id !== id));
+    setPageRows((prev) => prev.filter((c) => c.id !== id));
     setMessage("User deleted (locally)");
   };
-  /*
-  |--------------------------------------------------
-  | Function to handle customer click to open modal
-  |--------------------------------------------------
-  */
-  const handleCustomerClick = (customer) => {
-    setSelectedCustomer(customer);
-    console.log("Selected Customer:", customer);
-    setShowModal(true);
-  };
-
-  /*
-  |--------------------------------------------------
-  | Function to handle modal close
-  |--------------------------------------------------
-  */
-  const handleModalClose = () => {
-    setShowModal(false);
-    setSelectedCustomer(null);
-  };
-  /*
+    /*
   |--------------------------------------------------
   | useEffect to clear message after 3 seconds
   |--------------------------------------------------
@@ -134,6 +179,27 @@ const CustomerView = () => {
   }, [message]);
 
   /*
+  |--------------------------------------------------
+  | Function to handle customer click to open modal
+  |--------------------------------------------------
+  */
+  const handleCustomerClick = (customer) => {
+    setSelectedCustomer(customer);
+    setShowModal(true);
+  };
+
+  /*
+  |--------------------------------------------------
+  | Function to handle modal close
+  |--------------------------------------------------
+  */
+  const handleModalClose = () => {
+    setShowModal(false);
+    setSelectedCustomer(null);
+  };
+
+
+  /*
 |--------------------------------------------------
 |styling the component
 |--------------------------------------------------
@@ -143,6 +209,7 @@ const CustomerView = () => {
     fontWeight: "LIGHT",
     background: "rgb(248, 251, 255)",
   };
+
 
   return (
     <div className="container mt-4">
@@ -200,8 +267,8 @@ const CustomerView = () => {
               </td>
             </tr>
           ) : (
-            Array.isArray(customers) &&
-            customers.map((customer) => (
+            Array.isArray(pageRows) &&
+            pageRows.map((customer) => (
               <tr
                 key={customer.id}
                 onClick={() => handleCustomerClick(customer)} // CHANGED
@@ -243,7 +310,7 @@ const CustomerView = () => {
         </tbody>
       </table>
 
-      {!loading && customers.length === 0 && (
+      {!loading && pageRows.length === 0 && (
         <div className="alert alert-info text-center">
           No customers found.{" "}
           <button
@@ -254,7 +321,7 @@ const CustomerView = () => {
           </button>
         </div>
       )}
-      <div className="conatiner text-center  ">
+      <div className="text-center mt-2 ">
         <button
           disabled={page <= 1}
           type="button"
@@ -265,12 +332,21 @@ const CustomerView = () => {
         </button>
         <button
           type="button"
+          disabled={page >= totalPages}
           className="btn btn-primary btn-sm"
           onClick={handleNextClick}
         >
           Next &rarr;
         </button>
       </div>
+
+      { /*
+      |--------------------------------------------------
+      | This modal is triggered when a customer row is clicked
+      | It shows detailed information about the selected customer
+      |--------------------------------------------------
+      */ }
+
       <CustomerModal
         key={selectedCustomer?.id}
         customer={selectedCustomer}
